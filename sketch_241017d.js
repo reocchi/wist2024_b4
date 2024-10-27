@@ -132,38 +132,34 @@ function setup() {
     const button = select('#randomButton');
     button.mousePressed(startTransition); // Call startTransition on button press
     initializeGrid();
+    setupCellProperties();
 }
 
 function draw() {
     background(255); // Light gray background
-
-    // Calculate center position for grid
     let xOffset = (width - numCols * cellSize) / 2;
     let yOffset = (height - numRows * cellSize) / 2;
-    let iconScaleFactor = 0.4;
 
-    // Determine the elapsed time within the current fade cycle
-    let cycleTime = millis() % (2 * fadeDuration); // Total cycle is fade-in + fade-out
-
-    if (cycleTime < fadeDuration) {
-        // Fade-in phase
-        if (!fadeIn) {
-            fadeIn = true;
-            newGridSet = false; // Reset flag to allow a new grid update at the start of fade-in
+    // Update alpha values for each cell
+    for (let i = 0; i < numRows; i++) {
+        for (let j = 0; j < numCols; j++) {
+            let fadeDuration = fadeDurations[i][j];
+            if (fadeInTimers[i][j]) {
+                let elapsedTime = millis() - fadeInTimers[i][j];
+                cellAlphas[i][j] = map(elapsedTime, 0, fadeDuration, 0, 255);
+                if (elapsedTime > fadeDuration) {
+                    fadeInTimers[i][j] = null; // Stop the timer
+                    cellAlphas[i][j] = 255; // Ensure full opacity after fade-in
+                }
+            } else if (fadeOutTimers[i][j]) {
+                let elapsedTime = millis() - fadeOutTimers[i][j];
+                cellAlphas[i][j] = map(elapsedTime, 0, fadeDuration, 255, 0);
+                if (elapsedTime > fadeDuration) {
+                    fadeOutTimers[i][j] = null; // Stop the timer
+                    cellAlphas[i][j] = 0; // Ensure full transparency after fade-out
+                }
+            }
         }
-        alpha = map(cycleTime, 0, fadeDuration, 0, 255); // Increase alpha over time
-
-        // Set a new grid at the start of each fade-in
-        if (!newGridSet) {
-            initializeGrid(); // Randomize the grid
-            newGridSet = true; // Prevent reinitializing until the next fade-in
-        }
-    } else {
-        // Fade-out phase
-        if (fadeIn) {
-            fadeIn = false;
-        }
-        alpha = map(cycleTime - fadeDuration, 0, fadeDuration, 255, 0); // Decrease alpha over time
     }
 
     // Draw the current grid with the current alpha
@@ -172,27 +168,22 @@ function draw() {
             let x = xOffset + j * cellSize;
             let y = yOffset + i * cellSize;
 
-            // Draw the grid cell with a transparent stroke
-            stroke(255, alpha * 0.5); // 50% transparency for the grid line
+            stroke(255, cellAlphas[i][j] * 0.5); // 50% transparency for the grid line
             noFill();
             rect(x, y, cellSize, cellSize); // Draw cell outline with transparency
 
             // Draw cell content based on type
-            if (grid[i][j] && typeof grid[i][j] === 'object') {
-                if (icons.includes(grid[i][j])) {
-                    let iconSize = cellSize * iconScaleFactor;
+            let alphaValue = cellAlphas[i][j];
+            if (currentGrid[i][j]) {
+                if (icons.includes(currentGrid[i][j])) {
+                    let iconSize = cellSize * 0.4;
                     let iconX = x + (cellSize - iconSize) / 2;
                     let iconY = y + (cellSize - iconSize) / 2;
-                    tint(255, alpha); // Set alpha for fade effect
-                    image(grid[i][j], iconX, iconY, iconSize, iconSize);
-                } else {
-                    tint(255, alpha);
-                    image(grid[i][j], x, y, cellSize, cellSize);
-                }
-            } else if (grid[i][j] && typeof grid[i][j] === 'string') {
-                fill(0, alpha); // Set text color with alpha
-                textAlign(CENTER, CENTER);
-
+                    tint(255, alphaValue); // Set alpha for fade effect
+                    image(currentGrid[i][j], iconX, iconY, iconSize, iconSize);
+                } else if (typeof currentGrid[i][j] === 'string') {
+                    fill(0, alphaValue); // Set text color with alpha
+                    textAlign(CENTER, CENTER);
                 let textContent = grid[i][j];
                 let targetWidth = cellSize * 0.8;
                 let targetHeight = cellSize * 0.8;
@@ -200,9 +191,10 @@ function draw() {
                 let optimalFontSize = calculateFontSize(textContent, targetWidth, targetHeight);
                 textSize(optimalFontSize);
                 text(textContent, x + cellSize / 2, y + cellSize / 2);
-            } else {
-                fill(255, alpha);
-                rect(x, y, cellSize, cellSize);
+                } else {
+                    tint(255, alphaValue);
+                    image(currentGrid[i][j], x, y, cellSize, cellSize);
+                }
             }
         }
     }
@@ -210,14 +202,12 @@ function draw() {
     noTint(); // Reset tint after drawing
 }
 
+
 // Function to start the transition by initializing the new grid and resetting transition variables
 function startTransition() {
-    if (!transitionInProgress) {
-        newGrid = initializeGrid(true); // Create a new grid for transition
-        transitionInProgress = true;
-        transitionStartTime = millis(); // Set start time
-        loop(); // Enable looping to animate the transition
-    }
+    // Set up new grid and reset properties for fade-in
+    initializeGrid();
+    setupCellProperties();
 }
 
 function calculateFontSize(textContent, targetWidth, targetHeight) {
@@ -231,54 +221,25 @@ function calculateFontSize(textContent, targetWidth, targetHeight) {
     return fontSize * Math.min(widthScale, heightScale);
 }
 
-function initializeGrid(forTransition = false) {
-       textFont(Lilac);
-    stroke(0,0);
-    let gridToInitialize = Array.from({ length: numRows }, () => Array(numCols).fill(null));
-
-    let selectedBgIndices = [];
-    let selectedIconIndices = [];
-    let selectedTextIndices = [];
-
-    while (selectedBgIndices.length < numBgToDisplay) {
-        let randomIndex = floor(random(bgImages.length));
-        if (!selectedBgIndices.includes(randomIndex)) {
-            selectedBgIndices.push(randomIndex);
-        }
-    }
-
-    while (selectedIconIndices.length < numIconsToDisplay) {
-        let randomIndex = floor(random(icons.length));
-        if (!selectedIconIndices.includes(randomIndex)) {
-            selectedIconIndices.push(randomIndex);
-        }
-    }
-
-    while (selectedTextIndices.length < numTextsToDisplay) {
-        let randomIndex = floor(random(texts.length));
-        if (!selectedTextIndices.includes(randomIndex)) {
-            selectedTextIndices.push(randomIndex);
-        }
-    }
-
-    let positions = [];
-    while (positions.length < numBgToDisplay + numIconsToDisplay) {
-        let randomPos = floor(random(numRows * numCols));
-        if (!positions.includes(randomPos)) {
-            positions.push(randomPos);
-        }
-    }
+function initializeGrid() {
+  textFont(Lilac);
+    currentGrid = Array.from({ length: numRows }, () => Array(numCols).fill(null));
+    let selectedBgIndices = selectRandomIndices(bgImages.length, numBgToDisplay);
+    let selectedIconIndices = selectRandomIndices(icons.length, numIconsToDisplay);
+    let selectedTextIndices = selectRandomIndices(texts.length, numTextsToDisplay);
+    
+    let positions = selectRandomPositions(numBgToDisplay + numIconsToDisplay);
 
     for (let i = 0; i < numBgToDisplay; i++) {
         let row = floor(positions[i] / numCols);
         let col = positions[i] % numCols;
-        gridToInitialize[row][col] = bgImages[selectedBgIndices[i]];
+        currentGrid[row][col] = bgImages[selectedBgIndices[i]];
     }
 
     for (let i = numBgToDisplay; i < numBgToDisplay + numIconsToDisplay; i++) {
         let row = floor(positions[i] / numCols);
         let col = positions[i] % numCols;
-        gridToInitialize[row][col] = icons[selectedIconIndices[i - numBgToDisplay]];
+        currentGrid[row][col] = icons[selectedIconIndices[i - numBgToDisplay]];
     }
 
     for (let i = 0; i < numTextsToDisplay; i++) {
@@ -286,11 +247,45 @@ function initializeGrid(forTransition = false) {
         do {
             row = floor(random(numRows));
             col = floor(random(numCols));
-        } while (gridToInitialize[row][col] !== null);
-        gridToInitialize[row][col] = texts[selectedTextIndices[i]];
+        } while (currentGrid[row][col] !== null);
+        currentGrid[row][col] = texts[selectedTextIndices[i]];
     }
+}
 
-    return forTransition ? gridToInitialize : (grid = gridToInitialize);
+function selectRandomIndices(total, count) {
+    let indices = [];
+    while (indices.length < count) {
+        let randomIndex = floor(random(total));
+        if (!indices.includes(randomIndex)) {
+            indices.push(randomIndex);
+        }
+    }
+    return indices;
+}
+
+function selectRandomPositions(total) {
+    let positions = [];
+    while (positions.length < total) {
+        let randomPos = floor(random(numRows * numCols));
+        if (!positions.includes(randomPos)) {
+            positions.push(randomPos);
+        }
+    }
+    return positions;
+}
+
+function setupCellProperties() {
+    cellAlphas = Array.from({ length: numRows }, () => Array(numCols).fill(0));
+    fadeDurations = Array.from({ length: numRows }, () => Array(numCols).fill(random(2000, 5000))); // Random duration between 2s and 5s
+    fadeInTimers = Array.from({ length: numRows }, () => Array(numCols).fill(null));
+    fadeOutTimers = Array.from({ length: numRows }, () => Array(numCols).fill(null));
+
+    // Set fade-in for all cells
+    for (let i = 0; i < numRows; i++) {
+        for (let j = 0; j < numCols; j++) {
+            fadeInTimers[i][j] = millis(); // Start fade-in now
+        }
+    }
 }
 
 function windowResized() {
