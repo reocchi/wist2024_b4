@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- PLEASE NO CHANGES BELOW THIS LINE (UNTIL I SAY SO) -->
+  <script language="javascript" type="text/javascript" src="libraries/p5.min.js"></script>
+  <script language="javascript" type="text/javascript" src="sketch_241017d.js"></script>
+  <!-- OK, YOU CAN MAKE CHANGES BELOW THIS LINE AGAIN -->
+
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    #randomButton {
+  background-color: #444444; /* Green background */
+  border: none; /* Remove border */
+  color: white; /* White text */
+  padding: 15px 32px; /* Padding around text */
+  text-align: center; /* Center text */
+  text-decoration: none; /* Remove underline */
+  display: inline-block; /* Keep the button inline */
+  font-size: 16px; /* Set font size */
+  margin: 10px 0; /* Margin around the button */
+  cursor: pointer; /* Pointer cursor on hover */
+  border-radius: 8px; /* Rounded corners */
+  transition: background-color 0.3s ease, transform 0.2s ease; /* Smooth background color change and scale effect */
+}
+
+#randomButton:hover {
+  background-color: #222222; /* Darker green on hover */
+  transform: scale(1.05); /* Slightly enlarge on hover */
+}
+
+#randomButton:active {
+  background-color: #3e8e41; /* Even darker green when pressed */
+  transform: scale(0.98); /* Slight shrink when clicked */
+}
+
+#randomButton:focus {
+  outline: none; /* Remove outline when focused */
+}
+  </style>
+</head>
+
+<body>
+   <button id="randomButton">Randomize Grid</button>
+</body>
+</html>
