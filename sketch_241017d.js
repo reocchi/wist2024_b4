@@ -1,24 +1,22 @@
 let bgImages = []; // Array to hold background images
 let icons = []; // Array to hold icons
-let numCols = 4; // Number of columns
-let numRows = 4; // Number of rows
+let numCols = 5; // Number of columns
+let numRows = 5; // Number of rows
 let cellSize = 200; // Size of each cell
 let grid = []; // Array to hold current grid information
 let newGrid = []; // Array to hold the new grid for transition
 let transitionInProgress = false; // Flag to check if a transition is happening
 let transitionStartTime = 0; // Timestamp to track transition time
 
-let alpha = 0; // Initial alpha value
+const numBgToDisplay = 6; // Number of background images to display
+const numIconsToDisplay = 3; // Number of icons to display
+const numTextsToDisplay = 3; // Number of texts to display
+
+let alpha = 0; // Starting alpha for fade-out effect
 let fadeIn = true; // Start with fade-in
 let fadeDuration = 5000; // Duration of each phase (5 seconds)
 let newGridSet = false; // Flag to track if a new grid has been set
 
-let cellFadeDelays = []; // Array to store random fade-in delays for each cell
-
-
-const numBgToDisplay = 6; // Number of background images to display
-const numIconsToDisplay = 3; // Number of icons to display
-const numTextsToDisplay = 3; // Number of texts to display
 
 const texts = [
     "DON'T",
@@ -113,7 +111,6 @@ const texts = [
     "SPECTRUM"
 ];
 
-
 let fontSize = 40;
 let lineHeight = fontSize * 1.2; // Set line height for text
 
@@ -133,56 +130,67 @@ function preload() {
 function setup() {
     createCanvas(windowWidth, windowHeight);
     const button = select('#randomButton');
-    button.mousePressed(); // Call startTransition on button press
+    button.mousePressed(startTransition); // Call startTransition on button press
     initializeGrid();
 }
 
 function draw() {
     background(255); // Light gray background
 
+    // Calculate center position for grid
     let xOffset = (width - numCols * cellSize) / 2;
     let yOffset = (height - numRows * cellSize) / 2;
     let iconScaleFactor = 0.4;
 
-    // Calculate current cycle time within fade-in and fade-out phase
-    let cycleTime = millis() % (2 * fadeDuration); // Full cycle: fade-in + fade-out
+    // Determine the elapsed time within the current fade cycle
+    let cycleTime = millis() % (2 * fadeDuration); // Total cycle is fade-in + fade-out
 
+    if (cycleTime < fadeDuration) {
+        // Fade-in phase
+        if (!fadeIn) {
+            fadeIn = true;
+            newGridSet = false; // Reset flag to allow a new grid update at the start of fade-in
+        }
+        alpha = map(cycleTime, 0, fadeDuration, 0, 255); // Increase alpha over time
+
+        // Set a new grid at the start of each fade-in
+        if (!newGridSet) {
+            initializeGrid(); // Randomize the grid
+            newGridSet = true; // Prevent reinitializing until the next fade-in
+        }
+    } else {
+        // Fade-out phase
+        if (fadeIn) {
+            fadeIn = false;
+        }
+        alpha = map(cycleTime - fadeDuration, 0, fadeDuration, 255, 0); // Decrease alpha over time
+    }
+
+    // Draw the current grid with the current alpha
     for (let i = 0; i < numRows; i++) {
         for (let j = 0; j < numCols; j++) {
             let x = xOffset + j * cellSize;
             let y = yOffset + i * cellSize;
 
-            // Calculate individual cell's fade-in and fade-out phases
-            let cellAlpha = 0;
-            let cellElapsedTime = cycleTime - cellFadeDelays[i][j];
-
-            if (cellElapsedTime >= 0 && cellElapsedTime <= fadeDuration) {
-                // Fade-in phase
-                cellAlpha = map(cellElapsedTime, 0, fadeDuration / 2, 0, 255);
-            } else if (cellElapsedTime > fadeDuration && cellElapsedTime <= 2 * fadeDuration) {
-                // Fade-out phase
-                cellAlpha = map(cellElapsedTime - fadeDuration, 0, fadeDuration / 2, 255, 0);
-            }
-
-            // Draw grid cell with a transparent stroke
-            stroke(255, cellAlpha * 0.5); // 50% transparency for the grid line
+            // Draw the grid cell with a transparent stroke
+            stroke(255, alpha * 0.5); // 50% transparency for the grid line
             noFill();
             rect(x, y, cellSize, cellSize); // Draw cell outline with transparency
 
-            // Draw cell content based on type with calculated alpha
+            // Draw cell content based on type
             if (grid[i][j] && typeof grid[i][j] === 'object') {
                 if (icons.includes(grid[i][j])) {
                     let iconSize = cellSize * iconScaleFactor;
                     let iconX = x + (cellSize - iconSize) / 2;
                     let iconY = y + (cellSize - iconSize) / 2;
-                    tint(255, cellAlpha); // Set alpha for fade effect
+                    tint(255, alpha); // Set alpha for fade effect
                     image(grid[i][j], iconX, iconY, iconSize, iconSize);
                 } else {
-                    tint(255, cellAlpha);
+                    tint(255, alpha);
                     image(grid[i][j], x, y, cellSize, cellSize);
                 }
             } else if (grid[i][j] && typeof grid[i][j] === 'string') {
-                fill(0, cellAlpha); // Set text color with alpha
+                fill(0, alpha); // Set text color with alpha
                 textAlign(CENTER, CENTER);
 
                 let textContent = grid[i][j];
@@ -193,7 +201,7 @@ function draw() {
                 textSize(optimalFontSize);
                 text(textContent, x + cellSize / 2, y + cellSize / 2);
             } else {
-                fill(255, cellAlpha);
+                fill(255, alpha);
                 rect(x, y, cellSize, cellSize);
             }
         }
@@ -224,19 +232,8 @@ function calculateFontSize(textContent, targetWidth, targetHeight) {
 }
 
 function initializeGrid(forTransition = false) {
-     textFont(Lilac);
-
-    grid = Array.from({ length: numRows }, () => Array(numCols).fill(null)); // Reset grid
-    cellFadeDelays = Array.from({ length: numRows }, () => Array(numCols).fill(0)); // Reset cell fade delays
-
-    // Randomly set a delay for each cell fade-in effect
-    for (let i = 0; i < numRows; i++) {
-        for (let j = 0; j < numCols; j++) {
-            cellFadeDelays[i][j] = random(0, fadeDuration / 2); // Random delay up to half the fade duration
-        }
-    }
-    
-    
+       textFont(Lilac);
+    stroke(0,0);
     let gridToInitialize = Array.from({ length: numRows }, () => Array(numCols).fill(null));
 
     let selectedBgIndices = [];
