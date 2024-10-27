@@ -1,20 +1,22 @@
 let bgImages = []; // Array to hold background images
 let icons = []; // Array to hold icons
-let numCols = 3; // Number of columns
-let numRows = 5; // Number of rows
+let numCols = 5; // Number of columns
+let numRows = 3; // Number of rows
 let cellSize = 150; // Size of each cell
 let grid = []; // Array to hold current grid information
 let newGrid = []; // Array to hold the new grid for transition
 let transitionInProgress = false; // Flag to check if a transition is happening
 let transitionStartTime = 0; // Timestamp to track transition time
 
-const numBgToDisplay = 6; // Number of background images to display
+const numBgToDisplay = 4; // Number of background images to display
 const numIconsToDisplay = 3; // Number of icons to display
 const numTextsToDisplay = 3; // Number of texts to display
 
 let alpha = 0; // Starting alpha for fade-out effect
 let fadeIn = true; // Start with fade-in
-let fadeDuration = 4 * 1000; // Duration of each phase (5 seconds)
+let fadeInDuration = 4 * 1000; // Duration of each phase (5 seconds)
+let fadeOutDuration = 10 * 1000; // Duration of each phase (5 seconds)
+
 let newGridSet = false; // Flag to track if a new grid has been set
 
 
@@ -144,15 +146,15 @@ function draw() {
     let iconScaleFactor = 0.4;
 
     // Determine the elapsed time within the current fade cycle
-    let cycleTime = millis() % (2 * fadeDuration); // Total cycle is fade-in + fade-out
+    let cycleTime = millis() % (fadeInDuration + fadeOutDuration); // Total cycle is fade-in + fade-out
 
-    if (cycleTime < fadeDuration) {
+    if (cycleTime < fadeInDuration) {
         // Fade-in phase
         if (!fadeIn) {
             fadeIn = true;
             newGridSet = false; // Reset flag to allow a new grid update at the start of fade-in
         }
-        alpha = map(cycleTime, 0, fadeDuration, 0, 255); // Increase alpha over time
+        alpha = map(cycleTime, 0, fadeInDuration, 0, 255); // Increase alpha over time
 
         // Set a new grid at the start of each fade-in
         if (!newGridSet) {
@@ -164,7 +166,7 @@ function draw() {
         if (fadeIn) {
             fadeIn = false;
         }
-        alpha = map(cycleTime - fadeDuration, 0, fadeDuration, 255, 0); // Decrease alpha over time
+        alpha = map(cycleTime - fadeInDuration, 0, fadeOutDuration, 255, 0); // Decrease alpha over time
     }
 
     // Draw the current grid with the current alpha
